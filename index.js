@@ -1,13 +1,25 @@
 const fs = require("fs");
 const path = require("path");
 const readline = require("readline");
+const checkDiskSpace = require("check-disk-space").default;
 
 const CHUNK_SIZE = 400 * 1024 * 1024; // 400 МБ
 const INPUT_FILE = "input.txt";
 const OUTPUT_FILE = "output.txt";
 const TEMP_DIR = "temp";
 
-function validate(filePath, expectedExtension = ".txt") {
+async function checkFreeSpace(dirPath) {
+  const absolutePath = path.resolve(dirPath);
+  const requiredSpace = 1 * 1024 * 1024 * 1024 * 1024; // 1 ТБ
+  const diskSpace = await checkDiskSpace(absolutePath);
+  if (diskSpace.free < requiredSpace) {
+    throw new Error(
+      `Недостаточно свободного места на диске. Требуется: ${requiredSpace} байт ~1ТБ, доступно: ${diskSpace.free} байт.`
+    );
+  }
+}
+
+async function validate(filePath, expectedExtension = ".txt") {
   if (!fs.existsSync(filePath)) {
     throw new Error(`Файл ${filePath} не существует.`);
   }
@@ -18,6 +30,7 @@ function validate(filePath, expectedExtension = ".txt") {
       `Файл ${filePath} должен иметь расширение ${expectedExtension}.`
     );
   }
+  await checkFreeSpace(path.dirname(filePath));
   if (!fs.existsSync(TEMP_DIR)) {
     fs.mkdirSync(TEMP_DIR);
   }
